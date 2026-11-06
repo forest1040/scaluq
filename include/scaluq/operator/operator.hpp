@@ -1,11 +1,11 @@
 #pragma once
 
-
 #include <random>
 #include <vector>
 
 #include "../types.hpp"
 #include "../util/random.hpp"
+#include "grouped_pauli_operator.hpp"
 #include "pauli_operator.hpp"
 
 namespace scaluq {
@@ -50,7 +50,8 @@ public:
     [[nodiscard]] ComplexMatrix get_full_matrix(std::uint64_t n_qubits) const;
 
     void apply_to_state(StateVector<Prec, Space>& state_vector) const;
-    void apply_to_state(const StateVector<Prec, Space>& input, StateVector<Prec, Space>& output) const;
+    void apply_to_state(const StateVector<Prec, Space>& input,
+                        StateVector<Prec, Space>& output) const;
 
     [[nodiscard]] StdComplex get_expectation_value(
         const StateVector<Prec, Space>& state_vector) const;
@@ -184,13 +185,16 @@ void bind_operator_operator_hpp(nb::module_& m) {
              &Operator<Prec, Space>::get_dagger,
              "Get the adjoint (Hermitian conjugate) of the operator.")
         .def("apply_to_state",
-             nb::overload_cast<StateVector<Prec, Space>&>(&Operator<Prec, Space>::apply_to_state, nb::const_),
+             nb::overload_cast<StateVector<Prec, Space>&>(&Operator<Prec, Space>::apply_to_state,
+                                                          nb::const_),
              "state"_a,
              "Apply the operator to a state vector.")
         .def("apply_to_state",
              nb::overload_cast<const StateVector<Prec, Space>&, StateVector<Prec, Space>&>(
                  &Operator<Prec, Space>::apply_to_state, nb::const_),
-             "input"_a, "output"_a, "Apply the operator into output; aliasing is supported.")
+             "input"_a,
+             "output"_a,
+             "Apply the operator into output; aliasing is supported.")
         .def(
             "get_expectation_value",
             [](const Operator<Prec, Space>& op, const StateVector<Prec, Space>& state) {
@@ -407,6 +411,29 @@ void bind_operator_operator_hpp(nb::module_& m) {
         .def("__str__",
              &Operator<Prec, Space>::to_string,
              "Get string representation of the operator.");
+    nb::class_<GroupedPauliOperator<Prec, Space>>(
+        m,
+        "GroupedPauliOperator",
+        "Immutable XOR-grouped Pauli sum. The cache budget is in bytes; zero streams terms.")
+        .def(nb::init<std::uint64_t, const std::vector<PauliOperator<Prec>>&, std::uint64_t>(),
+             "n_qubits"_a,
+             "terms"_a,
+             "cache_budget"_a = 0)
+        .def("n_groups", &GroupedPauliOperator<Prec, Space>::n_groups)
+        .def("is_cached", &GroupedPauliOperator<Prec, Space>::is_cached)
+        .def("apply_to_state",
+             &GroupedPauliOperator<Prec, Space>::apply_to_state,
+             "input"_a,
+             "output"_a,
+             "coef"_a = 1.,
+             "Add coef times the operator applied to input to output.")
+        .def("get_expectation_value",
+             &GroupedPauliOperator<Prec, Space>::get_expectation_value,
+             "state"_a)
+        .def("get_transition_amplitude",
+             &GroupedPauliOperator<Prec, Space>::get_transition_amplitude,
+             "bra"_a,
+             "ket"_a);
     ground_state.def_ro("eigenvalue", &Operator<Prec, Space>::GroundState::eigenvalue)
         .def_ro("state", &Operator<Prec, Space>::GroundState::state);
 }
