@@ -206,3 +206,24 @@ returns the remaining qubits in ascending original index order. It does not
 normalize the result. Conversely, `embed_substate(small, target_qubits)`
 replaces the state with `small` mapped onto the listed qubits, where entry `j`
 of the list is qubit `j` of `small`; all other qubits are zero.
+
+### Applying diagonal operators
+
+`state.multiply_elementwise(diagonal)` multiplies each amplitude in place by the
+corresponding amplitude in another `StateVector`. Both vectors must have the same
+precision, execution space and dimension. Neither vector needs to be normalized;
+the result is not normalized automatically. The diagonal weights remain unchanged.
+Passing `state` itself squares its amplitudes.
+
+For a sum of Z strings, precompute its diagonal once and load it into `diagonal`.
+Each application then takes one pass over the state and uses no state-sized
+scratch buffer or sparse-matrix index arrays:
+
+```python
+state = StateVector(2)
+state.load([1, 2, 3, 4])
+diagonal = StateVector(2)
+# Diagonal of 0.5 Z0 + 0.25 Z1, in little-endian basis order.
+diagonal.load([0.75, -0.25, 0.25, -0.75])
+state.multiply_elementwise(diagonal)
+```
