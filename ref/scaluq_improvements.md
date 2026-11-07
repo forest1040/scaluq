@@ -29,8 +29,9 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 |---|---|---|---|
 | `test/high-priority-improvements` | `upstream/main` (`01934038`) + B1・B2・C1・C5（PR #460・#461・#462） | `b16fd8f8`。C++・Python・文書例・SKIPPER の統合検証済み。最終の CI 互換修正も別途検証済み | ローカルのみ、push 未実施 |
 | `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 + C5 CUDA 互換修正 | C2・D1・D2（PR #465・#466・#467）取り込み済み。コード先端 `c03728cd`。中優先度の全体検証完了、後続の C5 CUDA 互換修正も個別検証済み | fork へ push（upstream の PR・マージ対象外） |
+| `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4 | C3 から先に実装し、その後 C4。現在は実装・取り込み前 | ローカルのみ、push 未実施 |
 
-現在の主作業ディレクトリ `~/work3/scaluq` は `test/medium-priority-improvements` を checkout している。各 PR 用ブランチは別 worktree で維持する。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
+現在の主作業ディレクトリ `~/work3/scaluq` は `test/batched-operator-improvements` を checkout している。各 PR 用ブランチは別 worktree で維持する。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
 
 - 統合検証ブランチはテスト・ベンチマーク用とし、このブランチから upstream へ PR を出したり、そのままマージしたりしない。
 - **本書は統合検証用ブランチにだけコミットする。PR 用ブランチには追加せず、本書の更新コミットも cherry-pick しない。** `/ref/` の ignore 設定は維持し、本書を最初に追跡するときだけ `git add -f ref/scaluq_improvements.md` で対象ファイルを明示する。他の参考資料は追加しない。
@@ -38,8 +39,9 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 - 統合検証で必要になった実装修正は、該当する独立 PR 用ブランチへ反映し、そのブランチを検証して push する。統合検証ブランチにも同じ修正を取り込む。
 - PR のマージ待ちの間も、統合検証ブランチでは複数の改善を組み合わせて検証できる。SKIPPER の `main` の依存設定は変更しない。
 - 統合検証ブランチを作成・更新したら、この表の起点・構成項目・先端コミット・検証状況・push 状況を更新する。PR 番号やレビュー状態も併せて追跡する。
+- **作業中に追加の課題が見つかった場合は、本書に内容・根拠・優先度・関連 PR・対応状況を追記する。** 優先度が決まっていない場合は「未設定」と明記し、追加課題の記録と着手の判断は分ける。
 
-API 方針の相談: [Issue #459](https://github.com/qulacs/scaluq/issues/459)。優先度「高」の B1・B2・C1・C5 は実装済みでレビュー待ち。優先度「中」の C2・D1・D2 も実装・検証済みでレビュー待ち（F2・G1 は対象外）。A1〜A3 は実装済み。優先度「低」は保留。
+API 方針の相談: [Issue #459](https://github.com/qulacs/scaluq/issues/459)。優先度「高」の B1・B2・C1・C5 は実装済みでレビュー待ち。優先度「中」の C2・D1・D2 も実装・検証済みでレビュー待ち（F2・G1 は対象外）。A1〜A3 は実装済み。現在は C3 → C4 の順で実装する（C3 は優先度未設定、C4 は低）。その他の未対応項目は保留。
 
 2026-11-07 のローカル検証（4 項目を統合した CPU/OpenMP、f32/f64）: C++ 988 件 + CPU 構成 CTest、Python 回帰 5 件、文書例 406 件、SKIPPER 全 440 件が成功。0〜3 量子ビットの Pauli 文字列 340 通りを密行列と照合し、キャッシュ・ストリーミング・エイリアス・期待値・遷移振幅を確認。SKIPPER のコード・依存設定は変更していない。
 
@@ -118,6 +120,7 @@ CPU 測定（macOS arm64、f64、8 スレッド）: C2 は n=20 の CSR 対角�
 - 提案: バッチ版の Pauli 適用を追加する。QPE の複数結果の条件付き状態などで、複数本の状態をまとめて処理できる。
 
 ### C4. バッチ状態を重み付きで 1 本にまとめるカーネルがない
+- 2026-11-07 の着手前レビューで、既存草稿 `05923b64` は未検証であり、低精度の積・縮約の精度、部分重複ビュー、空バッチ、Python 公開 factory の内積転送、パディングされた小さい状態のテストを補う必要があると確認。これらを C4 の実装・検証タスクとして扱う（優先度は C4 と同じ低、PR は作成後に記載）。C3 の実装を先に完了してから着手する。
 - 現象: `StateVectorBatched.add_state_vector_with_coef` は全状態に共通のスカラー係数しか取れず、`multiply_coef` も共通。バッチの各状態を違う係数で足し合わせて 1 本の状態にする（out = Σ_b c_b ψ_b）には、`view_state_vector_at` 経由で状態ごとに B 回の加算が必要になる。
 - 提案: `StateVectorBatched.linear_combination(coefs) -> StateVector`（out = Σ_b c_b ψ_b）と、状態ごとの係数を取る `multiply_coef(coefs: list)`・`add_state_vector_with_coef(coefs: list, states)` を追加する。あわせて状態ごとの内積（`inner_product` のバッチ版）もあるとよい。
 - 効果: LCU の SELECT（Σ_j c_j P_j ψ）や角度だけ違う U_j の線形結合（Σ_j c_j U_j ψ）を、項をバッチにして 1 回の適用 + 1 回の縮約で計算できる。項の多いハミルトニアン（分子で L ≈ n^4）と小さい状態で効果が大きい（SKIPPER バックログ P-13）。
