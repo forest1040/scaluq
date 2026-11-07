@@ -29,7 +29,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 |---|---|---|---|
 | `test/high-priority-improvements` | `upstream/main` (`01934038`) + B1・B2・C1・C5（PR #460・#461・#462） | `b16fd8f8`。C++・Python・文書例・SKIPPER の統合検証済み。最終の CI 互換修正も別途検証済み | ローカルのみ、push 未実施 |
 | `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 + C5 CUDA 互換修正 | C2・D1・D2（PR #465・#466・#467）取り込み済み。コード先端 `c03728cd`。中優先度の全体検証完了、後続の C5 CUDA 互換修正も個別検証済み | fork へ push（upstream の PR・マージ対象外） |
-| `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4 | C3 から先に実装し、その後 C4。現在は実装・取り込み前 | ローカルのみ、push 未実施 |
+| `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4 | C3 から先に実装し、その後 C4。C3 取り込み済み（コード先端 `6ff33952`）、C4 は実装中 | ローカルのみ、push 未実施 |
 
 現在の主作業ディレクトリ `~/work3/scaluq` は `test/batched-operator-improvements` を checkout している。各 PR 用ブランチは別 worktree で維持する。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
 
@@ -77,6 +77,16 @@ CPU 測定（macOS arm64、f64、8 スレッド）: C2 は n=20 の CSR 対角�
 - 現象: 一時的な回路から `gate_list()` で取り出したゲートを、回路を破棄した後に使うとセグメンテーション違反になる。
 - 期待: 返すゲートが所有権（参照カウント）を持つ。少なくとも文書に明記する。
 - 回避策: 元の回路への参照をゲートと一緒に保持する。
+
+### A4. `PauliOperator.get_full_matrix(n_qubits)` が係数を無視する（追加課題）
+
+- 発見: 2026-11-07、C3 の密行列参照テストの作成中に確認。
+- 優先度: **未設定**。対応状況: 未対応。C3・C4 とは別の修正タスクとして管理する。
+- 再現: `PauliOperator("X 0", 2).get_full_matrix(1)` は `[[0, 1], [1, 0]]` を返す一方、`get_matrix()` は `[[0, 2], [2, 0]]` を返す。ビルド済みの f64 Python モジュールでも再現を確認した。
+- 原因: `src/operator/pauli_operator.cpp` の `get_full_matrix` が係数なしの triplet をそのまま格納しており、`_coef` を掛けていない。
+- 期待: `get_full_matrix` は係数を含め、`get_full_matrix_ignoring_coef` だけが係数を無視する。0 量子ビット、非自明な複素係数、全精度で回帰テストを追加する。
+- C3 の回避策: テスト参照値には `get_full_matrix_ignoring_coef(n) * coef()` を使い、この既存不具合を修正済みと仮定しない。
+- 関連 PR: C3 の実装 PR（作成後に番号を追記）。A4 自体の PR は未作成。
 
 ## B. ホストとのデータ転送（影響大）
 
