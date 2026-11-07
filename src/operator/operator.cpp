@@ -196,8 +196,7 @@ std::vector<StdComplex> Operator<internal::Prec, internal::Space>::get_expectati
     const std::uint64_t nterms = _terms.size();
     const std::uint64_t dim = state_vector.dim();
 
-    Kokkos::View<Kokkos::complex<double>*, internal::SpaceType<internal::Space>> res("expvals",
-                                                                                     nterms);
+    Kokkos::View<ComplexType*, internal::SpaceType<internal::Space>> res("expvals", nterms);
 
     using ExecSpace = internal::SpaceType<internal::Space>;
     using TeamPolicy = Kokkos::TeamPolicy<ExecSpace>;
@@ -257,12 +256,10 @@ std::vector<StdComplex> Operator<internal::Prec, internal::Space>::get_expectati
                 },
                 sum);
 
-            Kokkos::single(Kokkos::PerTeam(team),
-                           [&] { res(term_id) = Kokkos::complex<double>(sum.real(), sum.imag()); });
+            Kokkos::single(Kokkos::PerTeam(team), [&] { res(term_id) = sum; });
         });
 
-    auto res_h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), res);
-    return std::vector<StdComplex>(res_h.data(), res_h.data() + res_h.size());
+    return internal::complex_view_to_std_vector(res);
 }
 
 template <>
@@ -270,8 +267,8 @@ std::vector<StdComplex> Operator<internal::Prec, internal::Space>::get_expectati
     const StateVectorBatched<internal::Prec, internal::Space>& states) const {
     std::uint64_t nterms = _terms.size();
     std::uint64_t dim = states.dim();
-    Kokkos::View<Kokkos::complex<double>*, internal::SpaceType<internal::Space>> res(
-        "expectation_value_res", states.batch_size());
+    Kokkos::View<ComplexType*, internal::SpaceType<internal::Space>> res("expectation_value_res",
+                                                                         states.batch_size());
     Kokkos::parallel_for(
         "get_expectation_value",
         Kokkos::TeamPolicy<internal::SpaceType<internal::Space>>(
@@ -319,12 +316,9 @@ std::vector<StdComplex> Operator<internal::Prec, internal::Space>::get_expectati
                     }
                 },
                 sum);
-            Kokkos::single(Kokkos::PerTeam(team), [&]() {
-                res(batch_id) = Kokkos::complex<double>(sum.real(), sum.imag());
-            });
+            Kokkos::single(Kokkos::PerTeam(team), [&]() { res(batch_id) = sum; });
         });
-    auto res_h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), res);
-    return std::vector<StdComplex>(res_h.data(), res_h.data() + res_h.size());
+    return internal::complex_view_to_std_vector(res);
 }
 
 template <>
@@ -394,7 +388,7 @@ std::vector<StdComplex> Operator<internal::Prec, internal::Space>::get_transitio
     }
     std::uint64_t nterms = _terms.size();
     std::uint64_t dim = states_bra.dim();
-    Kokkos::View<Kokkos::complex<double>*, internal::SpaceType<internal::Space>> results(
+    Kokkos::View<ComplexType*, internal::SpaceType<internal::Space>> results(
         "transition_amplitude_res", states_bra.batch_size());
     Kokkos::parallel_for(
         "get_transition_amplitude",
@@ -444,12 +438,10 @@ std::vector<StdComplex> Operator<internal::Prec, internal::Space>::get_transitio
                     }
                 },
                 res);
-            Kokkos::single(Kokkos::PerTeam(team), [res, batch_id, results]() {
-                results(batch_id) = Kokkos::complex<double>(res.real(), res.imag());
-            });
+            Kokkos::single(Kokkos::PerTeam(team),
+                           [res, batch_id, results]() { results(batch_id) = res; });
         });
-    auto res_h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), results);
-    return std::vector<StdComplex>(res_h.data(), res_h.data() + res_h.size());
+    return internal::complex_view_to_std_vector(results);
 }
 
 template <>
@@ -611,10 +603,11 @@ Operator<internal::Prec, internal::Space>::solve_ground_state_by_arnoldi_method(
 template <>
 Operator<internal::Prec, internal::Space>& Operator<internal::Prec, internal::Space>::operator*=(
     StdComplex coef) {
+    const ComplexType c(coef);  // narrow on the host; the device must not see double
     Kokkos::parallel_for(
         "operator*=",
         Kokkos::RangePolicy<internal::SpaceType<internal::Space>>(0, _terms.size()),
-        KOKKOS_CLASS_LAMBDA(std::uint64_t i) { _terms(i)._coef *= coef; });
+        KOKKOS_CLASS_LAMBDA(std::uint64_t i) { _terms(i)._coef *= c; });
     _is_hermitian &= (coef.imag() == 0);
     return *this;
 }
@@ -637,7 +630,7 @@ Operator<internal::Prec, internal::Space> Operator<internal::Prec, internal::Spa
             {0, 0}, {_terms.size(), target._terms.size()}),
         KOKKOS_CLASS_LAMBDA(std::uint64_t i, std::uint64_t j, std::uint64_t & nnz_lcl) {
             ret._terms(i * target._terms.size() + j) = _terms(i) * target._terms(j);
-            if (static_cast<double>(ret._terms(i * target._terms.size() + j)._coef.imag()) == 0.)
+            if (ret._terms(i * target._terms.size() + j)._coef.imag() == static_cast<FloatType>(0))
                 ++nnz_lcl;
         },
         nnz_count);
