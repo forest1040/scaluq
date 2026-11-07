@@ -90,3 +90,15 @@ term metadata. If all arrays fit, construction takes O(L 2^n) work and each
 application or transition takes O(G 2^n), for L terms and G groups. Otherwise,
 the class streams the terms, taking O(L 2^n) work per call. The default budget
 is zero. `n_groups()` and `is_cached()` expose the selected representation.
+
+### Applying Pauli operators to batches
+
+`PauliOperator.apply_to_state` also accepts a `StateVectorBatched` and applies
+the same Pauli string and its coefficient independently to each state. It
+raises an error if the Pauli string references a qubit outside the states.
+
+```python
+states = scaluq.StateVectorBatched(3, 2)
+pauli = scaluq.PauliOperator("Y 0 Z 1", coef=0.5)
+pauli.apply_to_state(states)
+```

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bit>
 #include <string_view>
 #include <vector>
 
@@ -75,6 +76,15 @@ public:
                 auto value = factor * source.at_unsafe(b);
                 output.at_unsafe(i) += (Kokkos::popcount(b & z) & 1) ? -value : value;
             });
+    }
+
+    // Apply the same Pauli operator (including its coefficient) to every row.
+    template <ExecutionSpace Space>
+    void apply_to_state(StateVectorBatched<Prec, Space>& states) const {
+        if (std::bit_width(_bit_flip_mask | _phase_flip_mask) > states.n_qubits()) {
+            throw std::runtime_error("PauliOperator::apply_to_state: insufficient qubits");
+        }
+        internal::apply_pauli(0ULL, 0ULL, _bit_flip_mask, _phase_flip_mask, _coef, states);
     }
 
     template <ExecutionSpace Space>
@@ -220,6 +230,18 @@ void bind_operator_pauli_operator_hpp(nb::module_& m) {
             "output"_a,
             "coef"_a = 1.,
             "Add coef times this Pauli operator applied to input to output; aliasing is supported.")
+
+        .def("apply_to_state",
+             nb::overload_cast<StateVectorBatched<Prec, ExecutionSpace::Host>&>(
+                 &PauliOperator<Prec>::template apply_to_state<ExecutionSpace::Host>, nb::const_),
+             "states"_a,
+             "Apply this Pauli operator, including its coefficient, to every state in the batch.")
+        .def("apply_to_state",
+             nb::overload_cast<StateVectorBatched<Prec, ExecutionSpace::HostSerial>&>(
+                 &PauliOperator<Prec>::template apply_to_state<ExecutionSpace::HostSerial>,
+                 nb::const_),
+             "states"_a,
+             "Apply this Pauli operator, including its coefficient, to every state in the batch.")
         .def("get_expectation_value",
              nb::overload_cast<const StateVector<Prec, ExecutionSpace::Host>&>(
                  &PauliOperator<Prec>::template get_expectation_value<ExecutionSpace::Host>,
@@ -255,6 +277,13 @@ void bind_operator_pauli_operator_hpp(nb::module_& m) {
              "output"_a,
              "coef"_a = 1.,
              "Add the applied Pauli to output.")
+
+        .def(
+            "apply_to_state",
+            nb::overload_cast<StateVectorBatched<Prec, ExecutionSpace::Default>&>(
+                &PauliOperator<Prec>::template apply_to_state<ExecutionSpace::Default>, nb::const_),
+            "states"_a,
+            "Apply this Pauli operator, including its coefficient, to every state in the batch.")
 
         .def("get_expectation_value",
              nb::overload_cast<const StateVector<Prec, ExecutionSpace::Default>&>(
