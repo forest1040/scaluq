@@ -8,6 +8,28 @@ SKIPPER は scaluq の `StateVector` だけを使って、補助量子ビット�
 
 ---
 
+## OS 再起動後の引き継ぎメモ（2026-11-07 13:28 JST）
+
+- 作業場所: `/Users/tmori/work3/scaluq`。現在のブランチは `test/batched-operator-improvements`。本メモ追記前の HEAD は `91997988`、実装コードの先端は `f22587e5`。それまでの変更は commit・fork への push 済み。本メモも同じ統合検証ブランチへ commit・push する。
+- C3 → C4 の依頼は実装・検証・PR 作成まで完了。upstream `qulacs/scaluq` の `main` 宛てに #468・#469 を作成し、マージしていない。他の実装 PR とブランチは下の追跡表を参照する。レビュー・CI 状態は記録時点のため、再開時に GitHub で確認する。
+- 検証結果: C++ 1044 件 + CPU 構成 CTest、Python 75 件成功・12 件の環境依存スキップ、文書例 412 件、SKIPPER 全 440 件成功。f16・bf16 も実 Kokkos/OpenMP の個別チェックで重み付き和・内積の 4096 項集計を確認済み。ローカルのビルド・テスト・ベンチマークは終了しており、再実行が必要な未完了プロセスはない。GitHub Actions は OS の再起動に依存せず継続する。
+- 次に確認すること: #468・#469、および CUDA 互換修正を追加した #462 の CI・レビュー。修正が必要なら該当する独立 PR 用 worktree で直し、検証後に push し、統合検証ブランチにも取り込む。統合検証ブランチから upstream へ PR を作らない。
+- 未対応の追加課題: **A4** `PauliOperator.get_full_matrix()` が係数を無視する件。再現と原因は本書 A4 に記載済み、優先度は未設定。C3・C4 の PR には修正を混ぜていない。他の残タスクは B3、D3・D4、E1〜E3、G1 等。F2 Metal は別 AI の担当なので、その成果・制約を確認してから扱う。
+- **本書は統合検証用ブランチだけにコミットする。PR 用ブランチには追加せず、文書更新コミットを cherry-pick しない。** `/ref/` の ignore は維持し、本書を追加するときは対象を明示して `git add -f ref/scaluq_improvements.md`。他の参考資料やバックアップを追加しない。PR 作成後・新規課題発見時には本書を更新する。
+
+### 一時環境・ログの復元
+
+`/tmp` は再起動で消える可能性がある。`/tmp/scaluq-test-venv`、`/tmp/scaluq-batched-verified` 等の Python 環境・配置済みモジュールに依存して再開しない。必要なベンチマーク台本と最終検証ログは **`ref/reboot-artifacts/` に退避済み（ignore 対象、未コミット、ローカルディスクのみ）**。PR 本文にも測定条件・結果を残してある。
+
+- 本体の `build/` と worktree は永続ディスク上にある。現行 CMake は依存ソースとして `/Users/tmori/work3/scaluq-pauli/build-make/_deps/{kokkos,eigen,json,googletest}-src` を参照しているため、再開前にこれらの worktree・キャッシュを削除しない。
+- Python 環境が消えた場合は、例えば `uv venv build/restart-venv --python 3.12` と `uv pip install --python build/restart-venv/bin/python nanobind numpy scipy pytest scikit-build-core setuptools-scm ninja clang-format` で永続側へ再作成する。CMake の `Python_EXECUTABLE` と必要なら `nanobind_DIR` を新しい環境に更新して再構成する。古い `/tmp` のパスを含む CMake cache をそのまま使わない。
+- C++ の確認は `OMP_NUM_THREADS=2 OMP_PROC_BIND=false ./build/tests/scaluq_test`、構成テストは `ctest --test-dir build -R '^ScaluqCPUConfig$' --output-on-failure`。Python は再構成したビルドの拡張と、同じブランチの `python/scaluq` を組み合わせて使う。古い PyPI wheel を誤って検証しないよう、import 先と新 API の有無を確認する。
+- CPU 台帳 `/tmp/cpu-plan` も再起動で消え得る。重いビルド・テスト前に利用状況を確認し、予約・スレッド数上限を設定し直す。今回のセッションの予約はすべて終了済み。
+
+### 保留 worktree の注意
+
+`/Users/tmori/work3/scaluq-rotation` の `src/gate/gate_pauli.cpp` には、以前保留した D2 草稿の未コミット差分が残っている。最終 D2 は別 worktree の `perf/single-qubit-pauli-rotation`（PR #467）で完了しているため、この草稿を無条件で取り込まない。念のため差分を `ref/reboot-artifacts/paused-rotation-worktree.patch` に保存した。別 AI の `/Users/tmori/work3/scaluq-metal-exp` にある未追跡 `cfg.log`・`cfg-cpu.log` には触れていない。
+
 ## 実装・PR の追跡
 
 PR の作成・状態変更のたびに、この表と該当項目のリンクを更新する。PR はすべて upstream `qulacs/scaluq` の `main` 向け。各ブランチは独立しており、他の PR のマージを待たずにレビューできる。`ref/` は原則コミット対象外。ただし本書 `ref/scaluq_improvements.md` だけは統合検証用ブランチで追跡し、PR 対象から除外する。
