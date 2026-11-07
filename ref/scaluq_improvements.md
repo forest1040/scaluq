@@ -20,6 +20,8 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 | C2 対角演算の要素積 API | [#465](https://github.com/qulacs/scaluq/pull/465) | `feat/state-elementwise-product` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
 | D1 小さいホスト状態の Serial 実行しきい値 | [#466](https://github.com/qulacs/scaluq/pull/466) | `perf/small-state-dispatch` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
 | D2 1 量子ビット PauliRotation の専用カーネル振り分け | [#467](https://github.com/qulacs/scaluq/pull/467) | `perf/single-qubit-pauli-rotation` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| C3 バッチ状態への Pauli 適用 | [#468](https://github.com/qulacs/scaluq/pull/468) | `feat/batched-pauli-application` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| C4 重み付きバッチ演算・内積 | [#469](https://github.com/qulacs/scaluq/pull/469) | `feat/batched-weighted-algebra` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
 
 ### 統合検証用ブランチ
 
@@ -29,7 +31,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 |---|---|---|---|
 | `test/high-priority-improvements` | `upstream/main` (`01934038`) + B1・B2・C1・C5（PR #460・#461・#462） | `b16fd8f8`。C++・Python・文書例・SKIPPER の統合検証済み。最終の CI 互換修正も別途検証済み | ローカルのみ、push 未実施 |
 | `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 + C5 CUDA 互換修正 | C2・D1・D2（PR #465・#466・#467）取り込み済み。コード先端 `c03728cd`。中優先度の全体検証完了、後続の C5 CUDA 互換修正も個別検証済み | fork へ push（upstream の PR・マージ対象外） |
-| `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4 | C3 から先に実装し、その後 C4。C3 取り込み済み（コード先端 `6ff33952`）、C4 は実装中 | ローカルのみ、push 未実施 |
+| `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4 | C3・C4（PR #468・#469）を順に取り込み済み。コード先端 `f22587e5`、統合検証完了 | fork へ push（upstream の PR・マージ対象外） |
 
 現在の主作業ディレクトリ `~/work3/scaluq` は `test/batched-operator-improvements` を checkout している。各 PR 用ブランチは別 worktree で維持する。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
 
@@ -41,7 +43,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 - 統合検証ブランチを作成・更新したら、この表の起点・構成項目・先端コミット・検証状況・push 状況を更新する。PR 番号やレビュー状態も併せて追跡する。
 - **作業中に追加の課題が見つかった場合は、本書に内容・根拠・優先度・関連 PR・対応状況を追記する。** 優先度が決まっていない場合は「未設定」と明記し、追加課題の記録と着手の判断は分ける。
 
-API 方針の相談: [Issue #459](https://github.com/qulacs/scaluq/issues/459)。優先度「高」の B1・B2・C1・C5 は実装済みでレビュー待ち。優先度「中」の C2・D1・D2 も実装・検証済みでレビュー待ち（F2・G1 は対象外）。A1〜A3 は実装済み。現在は C3 → C4 の順で実装する（C3 は優先度未設定、C4 は低）。その他の未対応項目は保留。
+API 方針の相談: [Issue #459](https://github.com/qulacs/scaluq/issues/459)。優先度「高」の B1・B2・C1・C5 は実装済みでレビュー待ち。優先度「中」の C2・D1・D2 も実装・検証済みでレビュー待ち（F2・G1 は対象外）。A1〜A3 は実装済み。C3 → C4 の順で実装・検証し、PR #468・#469 はレビュー待ち（C3 は優先度未設定、C4 は低）。追加課題 A4 は未対応。その他の未対応項目は保留。
 
 2026-11-07 のローカル検証（4 項目を統合した CPU/OpenMP、f32/f64）: C++ 988 件 + CPU 構成 CTest、Python 回帰 5 件、文書例 406 件、SKIPPER 全 440 件が成功。0〜3 量子ビットの Pauli 文字列 340 通りを密行列と照合し、キャッシュ・ストリーミング・エイリアス・期待値・遷移振幅を確認。SKIPPER のコード・依存設定は変更していない。
 
@@ -59,6 +61,17 @@ C5 の初回 CI では静的解析用 Kokkos スタブに `IndexType` が無く�
 高優先度も含む統合検証は、C++ 1020 件 + CPU 構成 CTest、Python 回帰 47 件、文書例 412 件、SKIPPER 全 440 件が成功。静的解析用スタブの構文確認も実施した。各 PR は `upstream/main` 起点で独立しており、本書はどの PR の差分にも含めていない。
 
 CPU 測定（macOS arm64、f64、8 スレッド）: C2 は n=20 の CSR 対角適用 2.047 ms に対して要素積 0.262 ms。D1 は n=12 の RX で、無効時 46.38 µs、しきい値 4096 で 3.66 µs。D2 は n=20 の X が 384.42→342.21 µs、Y が 421.61→361.72 µs、Z は 389.84→396.50 µs でほぼ同等。別 AI の F2 ビルド（12 スレッド）が並行稼働していたため、参考の相対測定として扱う。設定・測定方法は各 PR 本文に記録した。
+
+
+### C3・C4 の実装・検証（2026-11-07）
+
+C3 は同じ Pauli と複素係数をバッチの全状態へ 1 回のカーネルで適用する。量子ビット範囲を先に検証し、パディングした保存領域、空バッチ、0 量子ビットにも対応。C4 は `linear_combination(coefs)`、状態別係数の `multiply_coef` / `add_state_vector_with_coef`、対応する行同士の `inner_product` を追加した。部分重複ビューには入力を保存して対処し、重み付き和と内積は最低でも float、f64 は double で積・集計を行う。
+
+統合検証: C++ 1044 件 + CPU 構成 CTest、Python 回帰 75 件成功・12 件スキップ、文書例 412 件、SKIPPER 全 440 件が成功。Python のスキップは CPU ビルドに追加ホストモジュールが存在しないケース。C3 → C4 の組み合わせも密行列と照合した。f16・bf16 は実 Kokkos/OpenMP の個別実行で、4096 項の重み付き和と内積がどちらも正しく 4096 になることを確認した。静的解析用スタブの構文確認と生成された公開型スタブの引数・戻り値も確認済み。
+
+測定（macOS arm64、f64、8 スレッド、専有予約、他の台帳上のビルドは終了済み）: 64 状態・12 量子ビット、warmup 後 100 回平均で、Pauli の行ごとの適用 3.202 ms → バッチ適用 0.115 ms、行ごとの重み付き和 3.354 ms → 線形結合 0.127 ms、行ごとの内積 3.515 ms → バッチ内積 0.162 ms。行ビューは事前作成し、線形結合の出力確保は測定に含めた。詳細は各 PR 本文を参照。
+
+追加課題 A4（行列取得での係数欠落）は記録のみとし、この 2 件の PR では修正していない。本書は統合検証用ブランチにだけコミットし、PR #468・#469 の差分には含めていない。
 
 
 ## A. 不具合
@@ -86,7 +99,7 @@ CPU 測定（macOS arm64、f64、8 スレッド）: C2 は n=20 の CSR 対角�
 - 原因: `src/operator/pauli_operator.cpp` の `get_full_matrix` が係数なしの triplet をそのまま格納しており、`_coef` を掛けていない。
 - 期待: `get_full_matrix` は係数を含め、`get_full_matrix_ignoring_coef` だけが係数を無視する。0 量子ビット、非自明な複素係数、全精度で回帰テストを追加する。
 - C3 の回避策: テスト参照値には `get_full_matrix_ignoring_coef(n) * coef()` を使い、この既存不具合を修正済みと仮定しない。
-- 関連 PR: C3 の実装 PR（作成後に番号を追記）。A4 自体の PR は未作成。
+- 関連 PR: C3 の実装 PR [#468](https://github.com/qulacs/scaluq/pull/468)。A4 自体の PR は未作成。
 
 ## B. ホストとのデータ転送（影響大）
 
@@ -126,11 +139,13 @@ CPU 測定（macOS arm64、f64、8 スレッド）: C2 は n=20 の CSR 対角�
 - 提案: 対角ゲート（`DiagonalMatrix(targets, diag)`）または「Z 文字列の和を対角として作用させる」専用カーネルを追加する。2 つの状態の要素ごとの積（`multiply_elementwise`）でもよい。
 
 ### C3. `StateVectorBatched` に `PauliOperator.apply_to_state` が使えない
+- 実装 PR: [#468](https://github.com/qulacs/scaluq/pull/468)（upstream 向け、未マージ）。
 - 現象: 回路やゲートはバッチ状態に作用するが、`PauliOperator` は `TypeError` になる。
 - 提案: バッチ版の Pauli 適用を追加する。QPE の複数結果の条件付き状態などで、複数本の状態をまとめて処理できる。
 
 ### C4. バッチ状態を重み付きで 1 本にまとめるカーネルがない
-- 2026-11-07 の着手前レビューで、既存草稿 `05923b64` は未検証であり、低精度の積・縮約の精度、部分重複ビュー、空バッチ、Python 公開 factory の内積転送、パディングされた小さい状態のテストを補う必要があると確認。これらを C4 の実装・検証タスクとして扱う（優先度は C4 と同じ低、PR は作成後に記載）。C3 の実装を先に完了してから着手する。
+- 実装 PR: [#469](https://github.com/qulacs/scaluq/pull/469)（upstream 向け、未マージ）。
+- 2026-11-07 の着手前レビューで、既存草稿 `05923b64` は未検証であり、低精度の積・縮約の精度、部分重複ビュー、空バッチ、Python 公開 factory の内積転送、パディングされた小さい状態のテストを補う必要があると確認。これらを C4 の実装・検証タスクとして扱う（優先度は C4 と同じ低、PR #469）。C3 の実装後にこれらを補完し、検証済み。
 - 現象: `StateVectorBatched.add_state_vector_with_coef` は全状態に共通のスカラー係数しか取れず、`multiply_coef` も共通。バッチの各状態を違う係数で足し合わせて 1 本の状態にする（out = Σ_b c_b ψ_b）には、`view_state_vector_at` 経由で状態ごとに B 回の加算が必要になる。
 - 提案: `StateVectorBatched.linear_combination(coefs) -> StateVector`（out = Σ_b c_b ψ_b）と、状態ごとの係数を取る `multiply_coef(coefs: list)`・`add_state_vector_with_coef(coefs: list, states)` を追加する。あわせて状態ごとの内積（`inner_product` のバッチ版）もあるとよい。
 - 効果: LCU の SELECT（Σ_j c_j P_j ψ）や角度だけ違う U_j の線形結合（Σ_j c_j U_j ψ）を、項をバッチにして 1 回の適用 + 1 回の縮約で計算できる。項の多いハミルトニアン（分子で L ≈ n^4）と小さい状態で効果が大きい（SKIPPER バックログ P-13）。
