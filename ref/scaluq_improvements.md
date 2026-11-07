@@ -16,7 +16,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 |---|---|---|---|
 | B1 NumPy 相互変換・B2 部分状態アクセス | [#460](https://github.com/qulacs/scaluq/pull/460) | `feat/state-data-access` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
 | C1 fused Pauli 加算・メモリ制限付き Operator 適用 | [#461](https://github.com/qulacs/scaluq/pull/461) | `feat/pauli-apply-add` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
-| C5 XOR グループ型 Pauli 演算子 | [#462](https://github.com/qulacs/scaluq/pull/462) | `feat/grouped-pauli-operator` | レビュー待ち・未マージ（ローカル検証完了、CUDA Install Library 失敗・原因確認中） |
+| C5 XOR グループ型 Pauli 演算子 | [#462](https://github.com/qulacs/scaluq/pull/462) | `feat/grouped-pauli-operator` | レビュー待ち・未マージ（ローカル検証完了、CUDA 互換修正 push 済み・CI 再実行中） |
 | C2 対角演算の要素積 API | [#465](https://github.com/qulacs/scaluq/pull/465) | `feat/state-elementwise-product` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
 | D1 小さいホスト状態の Serial 実行しきい値 | [#466](https://github.com/qulacs/scaluq/pull/466) | `perf/small-state-dispatch` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
 | D2 1 量子ビット PauliRotation の専用カーネル振り分け | [#467](https://github.com/qulacs/scaluq/pull/467) | `perf/single-qubit-pauli-rotation` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
@@ -28,7 +28,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 | ブランチ | 起点・取り込む項目 | 現在の状態 | 公開状態 |
 |---|---|---|---|
 | `test/high-priority-improvements` | `upstream/main` (`01934038`) + B1・B2・C1・C5（PR #460・#461・#462） | `b16fd8f8`。C++・Python・文書例・SKIPPER の統合検証済み。最終の CI 互換修正も別途検証済み | ローカルのみ、push 未実施 |
-| `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 | C2・D1・D2（PR #465・#466・#467）取り込み済み。コード先端 `ae4534a9`、全体検証完了 | fork へ push（upstream の PR・マージ対象外） |
+| `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 + C5 CUDA 互換修正 | C2・D1・D2（PR #465・#466・#467）取り込み済み。コード先端 `c03728cd`。中優先度の全体検証完了、後続の C5 CUDA 互換修正も個別検証済み | fork へ push（upstream の PR・マージ対象外） |
 
 現在の主作業ディレクトリ `~/work3/scaluq` は `test/medium-priority-improvements` を checkout している。各 PR 用ブランチは別 worktree で維持する。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
 
@@ -45,7 +45,7 @@ API 方針の相談: [Issue #459](https://github.com/qulacs/scaluq/issues/459)�
 
 測定（macOS arm64、f64、8 スレッド、専有予約）: n=22 の NumPy 出力の追加ピーク RSS は約 64 MiB（従来のリスト経由は約 289 MiB）。128 項 / 8 XOR グループ、n=20 の人工演算子では、コピー→適用→加算 100.78 ms、C1 31.16 ms、C5 キャッシュ 2.750 ms（warmup 後 10 回平均、キャッシュ構築を除外）。分子ハミルトニアンや GPU の実測ではない。詳細は各 PR 本文を参照。
 
-C5 の初回 CI では静的解析用 Kokkos スタブに `IndexType` が無く失敗したため、不要なポリシー指定を除去して追加コミット（`575afd26`）を push。実 Kokkos と解析スタブの構文確認、および f32/f64・OpenMP/HostSerial・キャッシュ有無の数値確認は成功。2026-11-07 12:46 の確認では、後続 CI の CUDA Install Library だけが失敗しており、原因を確認中。
+C5 の初回 CI では静的解析用 Kokkos スタブに `IndexType` が無く失敗したため、不要なポリシー指定を除去して追加コミット（`575afd26`）を push。実 Kokkos と解析スタブの構文確認、および f32/f64・OpenMP/HostSerial・キャッシュ有無の数値確認は成功。2026-11-07 12:46 の後続確認で CUDA Install Library のコンストラクタ内拡張ラムダ制約による失敗を確認。キャッシュ作成を名前付き Kokkos functor に変更し、`5747e6c8` を PR #462 へ追加 push した。f32/f64・OpenMP/HostSerial のキャッシュ有無の数値確認と解析スタブの構文確認は成功。CUDA 側の再検証は CI 実行中。この修正は中優先度の統合検証用ブランチにも取り込んだ。
 
 
 ### 中優先度の実装・検証（2026-11-07）
