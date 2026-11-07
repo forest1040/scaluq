@@ -13,7 +13,7 @@ SKIPPER は scaluq の `StateVector` だけを使って、補助量子ビット�
 - 作業場所: `/Users/tmori/work3/scaluq`。現在のブランチは `test/batched-operator-improvements`。本メモ追記前の HEAD は `91997988`、実装コードの先端は `f22587e5`。それまでの変更は commit・fork への push 済み。本メモも同じ統合検証ブランチへ commit・push する。
 - C3 → C4 の依頼は実装・検証・PR 作成まで完了。upstream `qulacs/scaluq` の `main` 宛てに #468・#469 を作成し、マージしていない。他の実装 PR とブランチは下の追跡表を参照する。レビュー・CI 状態は記録時点のため、再開時に GitHub で確認する。
 - 検証結果: C++ 1044 件 + CPU 構成 CTest、Python 75 件成功・12 件の環境依存スキップ、文書例 412 件、SKIPPER 全 440 件成功。f16・bf16 も実 Kokkos/OpenMP の個別チェックで重み付き和・内積の 4096 項集計を確認済み。ローカルのビルド・テスト・ベンチマークは終了しており、再実行が必要な未完了プロセスはない。GitHub Actions は OS の再起動に依存せず継続する。
-- 次に確認すること: #468・#469、および CUDA 互換修正を追加した #462 の CI・レビュー。修正が必要なら該当する独立 PR 用 worktree で直し、検証後に push し、統合検証ブランチにも取り込む。統合検証ブランチから upstream へ PR を作らない。
+- 次に確認すること: #467 の CUDA Install Library 失敗の原因確認・修正、および #462・#466・#468・#469 の CI・レビュー。修正が必要なら該当する独立 PR 用 worktree で直し、検証後に push し、統合検証ブランチにも取り込む。統合検証ブランチから upstream へ PR を作らない。
 - 未対応の追加課題: **A4** `PauliOperator.get_full_matrix()` が係数を無視する件。再現と原因は本書 A4 に記載済み、優先度は未設定。C3・C4 の PR には修正を混ぜていない。他の残タスクは B3、D3・D4、E1〜E3、G1 等。F2 Metal は別 AI の担当なので、その成果・制約を確認してから扱う。
 - **本書は統合検証用ブランチだけにコミットする。PR 用ブランチには追加せず、文書更新コミットを cherry-pick しない。** `/ref/` の ignore は維持し、本書を追加するときは対象を明示して `git add -f ref/scaluq_improvements.md`。他の参考資料やバックアップを追加しない。PR 作成後・新規課題発見時には本書を更新する。
 
@@ -39,9 +39,9 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 | B1 NumPy 相互変換・B2 部分状態アクセス | [#460](https://github.com/qulacs/scaluq/pull/460) | `feat/state-data-access` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
 | C1 fused Pauli 加算・メモリ制限付き Operator 適用 | [#461](https://github.com/qulacs/scaluq/pull/461) | `feat/pauli-apply-add` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
 | C5 XOR グループ型 Pauli 演算子 | [#462](https://github.com/qulacs/scaluq/pull/462) | `feat/grouped-pauli-operator` | レビュー待ち・未マージ（ローカル検証完了、CUDA 互換修正 push 済み・CI 再実行中） |
-| C2 対角演算の要素積 API | [#465](https://github.com/qulacs/scaluq/pull/465) | `feat/state-elementwise-product` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| C2 対角演算の要素積 API | [#465](https://github.com/qulacs/scaluq/pull/465) | `feat/state-elementwise-product` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
 | D1 小さいホスト状態の Serial 実行しきい値 | [#466](https://github.com/qulacs/scaluq/pull/466) | `perf/small-state-dispatch` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
-| D2 1 量子ビット PauliRotation の専用カーネル振り分け | [#467](https://github.com/qulacs/scaluq/pull/467) | `perf/single-qubit-pauli-rotation` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| D2 1 量子ビット PauliRotation の専用カーネル振り分け | [#467](https://github.com/qulacs/scaluq/pull/467) | `perf/single-qubit-pauli-rotation` | レビュー待ち・未マージ（ローカル検証完了、CUDA Install Library 失敗・原因確認と修正待ち） |
 | C3 バッチ状態への Pauli 適用 | [#468](https://github.com/qulacs/scaluq/pull/468) | `feat/batched-pauli-application` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
 | C4 重み付きバッチ演算・内積 | [#469](https://github.com/qulacs/scaluq/pull/469) | `feat/batched-weighted-algebra` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
 
@@ -197,6 +197,7 @@ C3 は同じ Pauli と複素係数をバッチの全状態へ 1 回のカーネ�
 - 提案: 小さい状態では並列化しない（またはスレッド数を絞る）しきい値を設ける。実行時にスレッド数を変更する API を用意する。
 
 ### D2. 1 量子ビットの `PauliRotation` が `RX`/`RZ` より遅い
+- CI 追補（2026-11-07 13:35 JST）: PR #467 の [CUDA Install Library](https://github.com/qulacs/scaluq/actions/runs/42335509107/job/128291646936) が失敗。追加の残タスクとして原因確認・必要な修正・CUDA CI の再確認を行う。ローカル CPU の検証成功と区別し、原因はログ確認前のため未確定とする。
 - 実装 PR: [#467](https://github.com/qulacs/scaluq/pull/467)（upstream 向け、未マージ）。
 - 現象: n=20 で `PauliRotation(X q)` 0.525 ms に対し `RX` 0.374 ms、`PauliRotation(Z q)` 0.462 ms に対し `RZ` 0.304 ms。1 量子ビットの `DenseMatrix` は 0.366 ms。
 - 提案: `PauliRotation` の生成時、または `Circuit.optimize` で、1 量子ビットの場合を専用カーネルに振り分ける。
