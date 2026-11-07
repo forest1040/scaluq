@@ -14,8 +14,8 @@ SKIPPER は scaluq の `StateVector` だけを使って、補助量子ビット�
 - C3 → C4 の依頼は実装・検証・PR 作成まで完了。upstream `qulacs/scaluq` の `main` 宛てに #468・#469 を作成し、マージしていない。他の実装 PR とブランチは下の追跡表を参照する。レビュー・CI 状態は記録時点のため、再開時に GitHub で確認する。
 - 検証結果: C++ 1044 件 + CPU 構成 CTest、Python 75 件成功・12 件の環境依存スキップ、文書例 412 件、SKIPPER 全 440 件成功。f16・bf16 も実 Kokkos/OpenMP の個別チェックで重み付き和・内積の 4096 項集計を確認済み。ローカルのビルド・テスト・ベンチマークは終了しており、再実行が必要な未完了プロセスはない。GitHub Actions は OS の再起動に依存せず継続する。
 - 次に確認すること: #467 の CUDA Install Library 失敗の原因確認・修正、および #462・#466・#468・#469 の CI・レビュー。修正が必要なら該当する独立 PR 用 worktree で直し、検証後に push し、統合検証ブランチにも取り込む。統合検証ブランチから upstream へ PR を作らない。
-- 未対応の追加課題: **A4** `PauliOperator.get_full_matrix()` が係数を無視する件。再現と原因は本書 A4 に記載済み、優先度は未設定。C3・C4 の PR には修正を混ぜていない。他の残タスクは B3、D3・D4、E1〜E3、G1 等。F2 Metal は別 AI の担当なので、その成果・制約を確認してから扱う。
-- **本書は統合検証用ブランチだけにコミットする。PR 用ブランチには追加せず、文書更新コミットを cherry-pick しない。** `/ref/` の ignore は維持し、本書を追加するときは対象を明示して `git add -f ref/scaluq_improvements.md`。他の参考資料やバックアップを追加しない。PR 作成後・新規課題発見時には本書を更新する。
+- 未対応の追加課題: **A4** `PauliOperator.get_full_matrix()` が係数を無視する件。再現と原因は本書 A4 に記載済み、優先度は未設定。C3・C4 の PR には修正を混ぜていない。他の残タスクは B3、D3・D4、E1〜E3、G1 等。F2 Metal は別 AI が調査・実装し、2026-11-07 にコード（PR #464）と調査結果（`ref/f2_metal_investigation.md`、`ref/f2_metal/`）を本ブランチへ統合した（下の「F2 調査結果」を参照）。
+- **本書は統合検証用ブランチだけにコミットする。PR 用ブランチには追加せず、文書更新コミットを cherry-pick しない。** `/ref/` の ignore は維持し、本書を追加するときは対象を明示して `git add -f ref/scaluq_improvements.md`。他の参考資料やバックアップを追加しない。例外として、ユーザーの指示（2026-11-07）により F2 の調査結果 `ref/f2_metal_investigation.md` と `ref/f2_metal/` も本ブランチで追跡する。原本は `research/f2-metal`（PR #463）で、更新は原本から取り込む。PR 作成後・新規課題発見時には本書を更新する。
 
 ### 一時環境・ログの復元
 
@@ -32,7 +32,7 @@ SKIPPER は scaluq の `StateVector` だけを使って、補助量子ビット�
 
 ## 実装・PR の追跡
 
-PR の作成・状態変更のたびに、この表と該当項目のリンクを更新する。PR はすべて upstream `qulacs/scaluq` の `main` 向け。各ブランチは独立しており、他の PR のマージを待たずにレビューできる。`ref/` は原則コミット対象外。ただし本書 `ref/scaluq_improvements.md` だけは統合検証用ブランチで追跡し、PR 対象から除外する。
+PR の作成・状態変更のたびに、この表と該当項目のリンクを更新する。PR はすべて upstream `qulacs/scaluq` の `main` 向け。各ブランチは独立しており、他の PR のマージを待たずにレビューできる。`ref/` は原則コミット対象外。ただし本書 `ref/scaluq_improvements.md` と F2 の調査結果（`ref/f2_metal_investigation.md`、`ref/f2_metal/`）は統合検証用ブランチで追跡し、PR 対象から除外する（F2 の調査結果の原本は PR #463）。
 
 | 項目 | PR | ブランチ（fork: forest1040/scaluq） | 状態 |
 |---|---|---|---|
@@ -43,8 +43,10 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 | D1 小さいホスト状態の Serial 実行しきい値 | [#466](https://github.com/qulacs/scaluq/pull/466) | `perf/small-state-dispatch` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
 | D2 1 量子ビット PauliRotation の専用カーネル振り分け | [#467](https://github.com/qulacs/scaluq/pull/467) | `perf/single-qubit-pauli-rotation` | レビュー待ち・未マージ（ローカル検証完了、CUDA Install Library 失敗・原因確認と修正待ち） |
 | C3 バッチ状態への Pauli 適用 | [#468](https://github.com/qulacs/scaluq/pull/468) | `feat/batched-pauli-application` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
-| A4 Pauli 全行列での係数欠落修正 | [#470](https://github.com/qulacs/scaluq/pull/470) | `fix/pauli-full-matrix-coefficient` | レビュー待ち・未マージ（修正前の回帰テスト失敗を確認、F2 専有測定終了後に修正後のローカル検証） |
+| A4 Pauli 全行列での係数欠落修正 | [#470](https://github.com/qulacs/scaluq/pull/470) | `fix/pauli-full-matrix-coefficient` | レビュー待ち・未マージ（修正前の回帰テスト失敗を確認。F2 専有測定は終了。統合ブランチで C++ 回帰テストの成功を確認、Python の回帰テストは未実行） |
 | C4 重み付きバッチ演算・内積 | [#469](https://github.com/qulacs/scaluq/pull/469) | `feat/batched-weighted-algebra` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| F2 Metal 調査報告（文書のみ） | [#463](https://github.com/qulacs/scaluq/pull/463) | `research/f2-metal` | レビュー待ち・未マージ。別 AI が担当 |
+| F2 Metal 対応のコード（AdaptiveCpp で SYCL バックエンドをビルド） | [#464](https://github.com/qulacs/scaluq/pull/464)（draft） | `exp/f2-metal-scaluq` | draft。パッチを当てた Kokkos が必要。Metal f32 229/229、OpenMP 968/968。別 AI が担当 |
 
 ### 統合検証用ブランチ
 
@@ -54,7 +56,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 |---|---|---|---|
 | `test/high-priority-improvements` | `upstream/main` (`01934038`) + B1・B2・C1・C5（PR #460・#461・#462） | `b16fd8f8`。C++・Python・文書例・SKIPPER の統合検証済み。最終の CI 互換修正も別途検証済み | ローカルのみ、push 未実施 |
 | `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 + C5 CUDA 互換修正 | C2・D1・D2（PR #465・#466・#467）取り込み済み。コード先端 `c03728cd`。中優先度の全体検証完了、後続の C5 CUDA 互換修正も個別検証済み | fork へ push（upstream の PR・マージ対象外） |
-| `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4・A4 | C3・C4（PR #468・#469）統合検証済み。A4（PR #470）取り込み済み、コード先端 `488e8243`。A4 修正後の検証は F2 専有測定終了待ち | fork へ push（upstream の PR・マージ対象外） |
+| `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4・A4 + F2（PR #464 の 5 コミット） | C3・C4（PR #468・#469）統合検証済み。A4（PR #470）取り込み済み。F2 を 2026-11-07 に取り込み、OpenMP 1052/1052・`ScaluqCPUConfig`・Metal f32 250/250 を確認（Python は未実行） | fork へ push（upstream の PR・マージ対象外） |
 
 現在の主作業ディレクトリ `~/work3/scaluq` は `test/batched-operator-improvements` を checkout している。各 PR 用ブランチは別 worktree で維持する。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
 
@@ -66,7 +68,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 - 統合検証ブランチを作成・更新したら、この表の起点・構成項目・先端コミット・検証状況・push 状況を更新する。PR 番号やレビュー状態も併せて追跡する。
 - **作業中に追加の課題が見つかった場合は、本書に内容・根拠・優先度・関連 PR・対応状況を追記する。** 優先度が決まっていない場合は「未設定」と明記し、追加課題の記録と着手の判断は分ける。
 
-API 方針の相談: [Issue #459](https://github.com/qulacs/scaluq/issues/459)。優先度「高」の B1・B2・C1・C5 は実装済みでレビュー待ち。優先度「中」の C2・D1・D2 も実装・検証済みでレビュー待ち（F2・G1 は対象外）。A1〜A3 は実装済み。C3 → C4 の順で実装・検証し、PR #468・#469 はレビュー待ち（C3 は優先度未設定、C4 は低）。追加課題 A4 は PR #470 で修正済み、修正後のローカル検証は F2 専有測定終了待ち。その他の未対応項目は保留。
+API 方針の相談: [Issue #459](https://github.com/qulacs/scaluq/issues/459)。優先度「高」の B1・B2・C1・C5 は実装済みでレビュー待ち。優先度「中」の C2・D1・D2 も実装・検証済みでレビュー待ち（F2・G1 は対象外）。A1〜A3 は実装済み。C3 → C4 の順で実装・検証し、PR #468・#469 はレビュー待ち（C3 は優先度未設定、C4 は低）。追加課題 A4 は PR #470 で修正済み。統合ブランチで C++ 回帰テストの成功を確認し、Python の回帰テストは未実行。F2 は別 AI の PR #463・#464 を統合済み。その他の未対応項目は保留。
 
 2026-11-07 のローカル検証（4 項目を統合した CPU/OpenMP、f32/f64）: C++ 988 件 + CPU 構成 CTest、Python 回帰 5 件、文書例 406 件、SKIPPER 全 440 件が成功。0〜3 量子ビットの Pauli 文字列 340 通りを密行列と照合し、キャッシュ・ストリーミング・エイリアス・期待値・遷移振幅を確認。SKIPPER のコード・依存設定は変更していない。
 
@@ -123,7 +125,7 @@ C3 は同じ Pauli と複素係数をバッチの全状態へ 1 回のカーネ�
 - 期待: `get_full_matrix` は係数を含め、`get_full_matrix_ignoring_coef` だけが係数を無視する。0 量子ビット、非自明な複素係数、全精度で回帰テストを追加する。
 - C3 の回避策: テスト参照値には `get_full_matrix_ignoring_coef(n) * coef()` を使い、この既存不具合を修正済みと仮定しない。
 - 関連 PR: C3 の実装 PR [#468](https://github.com/qulacs/scaluq/pull/468)。A4 修正 PR [#470](https://github.com/qulacs/scaluq/pull/470)。
-- 回帰検証: C++ typed tests と Python f32/f64 テストを追加。修正前のモジュールで Python 6 件すべての失敗を確認済み。修正後のビルド・実行は別 AI の F2 専有性能測定の終了後に行う。本書は統合検証ブランチのみで管理し、PR #470 の差分には含めない。
+- 回帰検証: C++ typed tests と Python f32/f64 テストを追加。修正前のモジュールで Python 6 件すべての失敗を確認済み。修正後のビルド・実行は別 AI の F2 専有性能測定の終了後に行う。F2 の測定は 2026-11-07 に終了し、統合ブランチで C++ 回帰テストの成功を確認した。Python 6 件は未実行。本書は統合検証ブランチのみで管理し、PR #470 の差分には含めない。
 
 ## B. ホストとのデータ転送（影響大）
 
@@ -269,6 +271,29 @@ scaluq（C++、Kokkos::View / parallel_for / parallel_reduce）
 
 別 AI から F2 の調査結果が届いたら、本書に実現可能性・対応方針・前提環境・互換性の制約・実際に検証できた範囲を反映する。Metal の実装・検証に進む場合は、作業場所の方針どおり別ディレクトリ・別ブランチを使い、PR を作成したら番号と状態を本書の追跡表へ追加する。CPU 側の統合検証結果を Metal 対応の検証結果として扱わない。
 
+### F2 調査結果（2026-11-07、別 AI）
+
+詳細は `ref/f2_metal_investigation.md`（第 1〜7 版）。生データ・パッチ・再現プログラムは `ref/f2_metal/`。
+
+- **実現可能性**: 可能。f32 の既存テストがすべて Apple M3 Ultra の GPU で成功した。単独のブランチでは 229/229。本ブランチに統合した状態では 250/250 で、C3・C4・C5 などの新機能を含む。
+- **前提環境**: macOS 26.7.1、AdaptiveCpp develop（`6c923f68`）に Metal 用の小さなパッチ、Kokkos 5.2.0 にパッチ（`ref/f2_metal/patches/`、24 ファイル）。実行時は `KOKKOS_DEVICE_ID=1` が必要。f64 は使えない（Metal 版は f32 以下に限る）。
+- **scaluq 側の変更**（PR #464、draft、5 コミット）:
+  - CMake オプション `SCALUQ_SYCL_ACPP` を追加した。
+  - デバイスコードから double を取り除いた。
+  - スクラッチレベルをコンパイル時定数にした（Metal で変換できない IR を避けるため）。
+  - f32 乱数の NaN を直した。
+  - Metal ビルドではカウンタ方式（Philox）の乱数を使う。ほかのビルドは従来の乱数のまま。
+  - `internal::Sum` の結果 View を HostSpace にした（本ブランチの統合検証で見つかった）。
+- **性能**（GPU が空いた状態、f32）:
+  - n ≥ 24 のゲートはネイティブ Metal と同じ約 700 GB/s で、CPU（OpenMP 28 スレッド）の 2.6〜3 倍。
+  - 小さい状態の 1 ゲートは約 19 µs。Kokkos パッチで間接カーネル用バッファを 4 個から 256 個に増やし、約 57 µs から縮めた。
+  - reduce には約 0.26 ms の固定コストが残る。
+- **互換性の制約**:
+  - 上流の Kokkos・AdaptiveCpp にはまだ入っていない。報告済み: Kokkos #9750、AdaptiveCpp #2310〜#2313。
+  - GPU 上で Kokkos 標準の乱数プールを大きな並列度で使うと、カーネルが暴走して OS を再起動するまで GPU に残る。scaluq の乱数は PR #464 で対策済み。
+- **上流 scaluq への報告**: #471（`Operator::get_expectation_value` が項ごとの計算の 5〜18 倍遅い）、#472（f32 の `get_squared_norm`/`normalize` の精度劣化）。どちらも CPU でも起きる。
+- **本ブランチで確認した範囲**: OpenMP の C++ 1052/1052、`ScaluqCPUConfig`、Metal の f32 C++ 250/250。Python・文書例・SKIPPER の統合検証は、F2 の統合後には再実行していない。CPU の結果を Metal の検証結果として扱わない、という方針は変わらない。
+
 ### F3. 検証の手順
 1. **AdaptiveCpp 単体**: Metal 対応で AdaptiveCpp をビルドし、`acpp-info` で GPU が見えること、簡単な SYCL カーネル（axpy、リダクション）が動くことを確認する。
 2. **Kokkos SYCL バックエンドを acpp でビルド**: Kokkos の単体テストを走らせ、失敗するテストを洗い出す。`parallel_for`、`parallel_reduce`、`View`、`deep_copy` を優先する。
@@ -368,7 +393,7 @@ scaluq（C++、Kokkos::View / parallel_for / parallel_reduce）
 | 高 | C5 XOR グループ型の Pauli 演算子（期待値・行列ベクトル積） | 分子ハミルトニアンで走査回数を L から G へ（LiH で 630 → 84）。C1・C2 の一般化。qva の実測で期待値 22.8〜121 倍 |
 | 中 | C2 対角演算子 | Z 項の多いハミルトニアンで matvec の走査回数を大幅に削減 |
 | 中 | D1 固定費、D2 1 量子ビット PauliRotation | n≤16 の最適化経路、Trotter 回路の高速化 |
-| 中 | F2 Metal 対応（FP32 以下、Kokkos + AdaptiveCpp + Metal） | Apple Silicon の GPU とユニファイドメモリで大きな状態を高速化、ホスト転送の解消（未測定。Kokkos SYCL と AdaptiveCpp の相性の検証が先） |
+| 中 | F2 Metal 対応（FP32 以下、Kokkos + AdaptiveCpp + Metal） | Apple Silicon の GPU とユニファイドメモリで大きな状態を高速化。実測で n≥24 のゲートは CPU の 2.6〜3 倍、ネイティブ Metal と同等（PR #463・#464、上流の Kokkos・AdaptiveCpp への取り込みが前提） |
 | 中 | G1-1 complex64、G1-2 融合ゲートの行列積実行 | 帯域律速カーネルの約 2 倍速、深い融合による U 適用の短縮（見込み、未測定） |
 | 低 | G1-4 分散実行 | n≥32 の大規模（SKIPPER の当面の範囲外） |
 | 低 | A1〜A3、D3、E1〜E3 | 正しさ・使い勝手（回避策あり） |
