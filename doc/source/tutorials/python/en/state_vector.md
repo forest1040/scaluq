@@ -252,3 +252,17 @@ Choose a threshold by measuring your workload: serial execution avoids OpenMP
 launch overhead but can be slower for large states. This setting does not change
 the Kokkos OpenMP thread pool; configure its size before initialization, for
 example through `OMP_NUM_THREADS` before importing scaluq in Python.
+
+### Weighted operations on batches
+
+For a `StateVectorBatched`, `linear_combination(coefs)` returns a new state
+`sum_b coefs[b] * states[b]`, without normalization. An empty batch returns a
+zero state with the same number of qubits. `multiply_coef(coefs)` scales each
+batch entry by its corresponding coefficient; `add_state_vector_with_coef(coefs,
+other)` adds the corresponding weighted entries of `other`. The coefficient
+count must match the batch size and both batches must have matching dimensions.
+
+`StateVectorBatched.inner_product(bra, ket)` returns one complex inner product
+per batch entry, with the first argument conjugated. Both batches must have the
+same precision, execution space, batch size, and number of qubits. Reductions
+use at least single precision even for lower-precision states.
