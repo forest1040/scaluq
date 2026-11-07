@@ -14,9 +14,12 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 
 | 項目 | PR | ブランチ（fork: forest1040/scaluq） | 状態 |
 |---|---|---|---|
-| B1 NumPy 相互変換・B2 部分状態アクセス | [#460](https://github.com/qulacs/scaluq/pull/460) | `feat/state-data-access` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
-| C1 fused Pauli 加算・メモリ制限付き Operator 適用 | [#461](https://github.com/qulacs/scaluq/pull/461) | `feat/pauli-apply-add` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
-| C5 XOR グループ型 Pauli 演算子 | [#462](https://github.com/qulacs/scaluq/pull/462) | `feat/grouped-pauli-operator` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| B1 NumPy 相互変換・B2 部分状態アクセス | [#460](https://github.com/qulacs/scaluq/pull/460) | `feat/state-data-access` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
+| C1 fused Pauli 加算・メモリ制限付き Operator 適用 | [#461](https://github.com/qulacs/scaluq/pull/461) | `feat/pauli-apply-add` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
+| C5 XOR グループ型 Pauli 演算子 | [#462](https://github.com/qulacs/scaluq/pull/462) | `feat/grouped-pauli-operator` | レビュー待ち・未マージ（ローカル検証完了、CUDA Install Library 失敗・原因確認中） |
+| C2 対角演算の要素積 API | [#465](https://github.com/qulacs/scaluq/pull/465) | `feat/state-elementwise-product` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| D1 小さいホスト状態の Serial 実行しきい値 | [#466](https://github.com/qulacs/scaluq/pull/466) | `perf/small-state-dispatch` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| D2 1 量子ビット PauliRotation の専用カーネル振り分け | [#467](https://github.com/qulacs/scaluq/pull/467) | `perf/single-qubit-pauli-rotation` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
 
 ### 統合検証用ブランチ
 
@@ -25,7 +28,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 | ブランチ | 起点・取り込む項目 | 現在の状態 | 公開状態 |
 |---|---|---|---|
 | `test/high-priority-improvements` | `upstream/main` (`01934038`) + B1・B2・C1・C5（PR #460・#461・#462） | `b16fd8f8`。C++・Python・文書例・SKIPPER の統合検証済み。最終の CI 互換修正も別途検証済み | ローカルのみ、push 未実施 |
-| `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 | C2・D1・D2 取り込み済み（`55490d45`）。中優先度を含む全体ビルド・検証を実施中 | ローカルのみ、push 未実施 |
+| `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 | C2・D1・D2（PR #465・#466・#467）取り込み済み。コード先端 `ae4534a9`、全体検証完了 | fork へ push（upstream の PR・マージ対象外） |
 
 現在の主作業ディレクトリ `~/work3/scaluq` は `test/medium-priority-improvements` を checkout している。各 PR 用ブランチは別 worktree で維持する。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
 
@@ -36,13 +39,24 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 - PR のマージ待ちの間も、統合検証ブランチでは複数の改善を組み合わせて検証できる。SKIPPER の `main` の依存設定は変更しない。
 - 統合検証ブランチを作成・更新したら、この表の起点・構成項目・先端コミット・検証状況・push 状況を更新する。PR 番号やレビュー状態も併せて追跡する。
 
-API 方針の相談: [Issue #459](https://github.com/qulacs/scaluq/issues/459)。優先度「高」の B1・B2・C1・C5 は実装済みでレビュー待ち。現在は優先度「中」の C2・D1・D2 を実装中（F2・G1 は対象外）。A1〜A3 は実装済み。優先度「低」は保留。
+API 方針の相談: [Issue #459](https://github.com/qulacs/scaluq/issues/459)。優先度「高」の B1・B2・C1・C5 は実装済みでレビュー待ち。優先度「中」の C2・D1・D2 も実装・検証済みでレビュー待ち（F2・G1 は対象外）。A1〜A3 は実装済み。優先度「低」は保留。
 
 2026-11-07 のローカル検証（4 項目を統合した CPU/OpenMP、f32/f64）: C++ 988 件 + CPU 構成 CTest、Python 回帰 5 件、文書例 406 件、SKIPPER 全 440 件が成功。0〜3 量子ビットの Pauli 文字列 340 通りを密行列と照合し、キャッシュ・ストリーミング・エイリアス・期待値・遷移振幅を確認。SKIPPER のコード・依存設定は変更していない。
 
 測定（macOS arm64、f64、8 スレッド、専有予約）: n=22 の NumPy 出力の追加ピーク RSS は約 64 MiB（従来のリスト経由は約 289 MiB）。128 項 / 8 XOR グループ、n=20 の人工演算子では、コピー→適用→加算 100.78 ms、C1 31.16 ms、C5 キャッシュ 2.750 ms（warmup 後 10 回平均、キャッシュ構築を除外）。分子ハミルトニアンや GPU の実測ではない。詳細は各 PR 本文を参照。
 
-C5 の初回 CI では静的解析用 Kokkos スタブに `IndexType` が無く失敗したため、不要なポリシー指定を除去して追加コミット（`575afd26`）を push。実 Kokkos と解析スタブの構文確認、および f32/f64・OpenMP/HostSerial・キャッシュ有無の数値確認は成功。CI は再実行待ち。
+C5 の初回 CI では静的解析用 Kokkos スタブに `IndexType` が無く失敗したため、不要なポリシー指定を除去して追加コミット（`575afd26`）を push。実 Kokkos と解析スタブの構文確認、および f32/f64・OpenMP/HostSerial・キャッシュ有無の数値確認は成功。2026-11-07 12:46 の確認では、後続 CI の CUDA Install Library だけが失敗しており、原因を確認中。
+
+
+### 中優先度の実装・検証（2026-11-07）
+
+- C2: `StateVector.multiply_elementwise(other)` を追加。通常の別状態と同一領域のエイリアスは追加バッファなし。C++ の部分重複ビューだけは重みをコピーしてから適用する。任意の複素対角成分、非正規化状態、0 量子ビットを扱う。
+- D1: `set_small_state_serial_threshold(max_amplitudes)` / `get_small_state_serial_threshold()` を追加。対象となるホストゲートの実行をしきい値で Serial に切り替える。既定値 0 は無効、バッチは総振幅数で判定。OpenMP スレッドプールの再構成は行わない。
+- D2: 実係数の 1 量子ビット X/Y/Z PauliRotation と ParamPauliRotation を RX/RY/RZ の専用カーネルへ振り分ける。バッチの異なるパラメータにも対応。複素係数・複数量子ビット・密度行列は従来の一般経路を使用する。
+
+高優先度も含む統合検証は、C++ 1020 件 + CPU 構成 CTest、Python 回帰 47 件、文書例 412 件、SKIPPER 全 440 件が成功。静的解析用スタブの構文確認も実施した。各 PR は `upstream/main` 起点で独立しており、本書はどの PR の差分にも含めていない。
+
+CPU 測定（macOS arm64、f64、8 スレッド）: C2 は n=20 の CSR 対角適用 2.047 ms に対して要素積 0.262 ms。D1 は n=12 の RX で、無効時 46.38 µs、しきい値 4096 で 3.66 µs。D2 は n=20 の X が 384.42→342.21 µs、Y が 421.61→361.72 µs、Z は 389.84→396.50 µs でほぼ同等。別 AI の F2 ビルド（12 スレッド）が並行稼働していたため、参考の相対測定として扱う。設定・測定方法は各 PR 本文に記録した。
 
 
 ## A. 不具合
@@ -95,6 +109,7 @@ C5 の初回 CI では静的解析用 Kokkos スタブに `IndexType` が無く�
 - 回避策（SKIPPER 2026-11-06）: 隣り合う項の積 Q_j = P_j P_{j−1} を前もって計算し、コピーを最初の 1 回だけにして、1 項あたり 2 回の走査（適用 + 加算）にした（`PauliSum._chain`）。C1 があれば 1 回の走査になる。
 
 ### C2. 対角演算子（Z 文字列の和）を 1 回で作用させる手段がない
+- 実装 PR: [#465](https://github.com/qulacs/scaluq/pull/465)（upstream 向け、未マージ）。
 - 現象: Z だけからなる項（イジング型・分子ハミルトニアンの大部分）も 1 項ずつ処理するしかない。対角行列を `SparseMatrix` ゲートで作用させると、n=20 で 4.5 ms と Pauli 適用（0.54 ms）の約 8 倍かかり、CSR 配列のメモリ（32 B/振幅）も必要になる。
 - 提案: 対角ゲート（`DiagonalMatrix(targets, diag)`）または「Z 文字列の和を対角として作用させる」専用カーネルを追加する。2 つの状態の要素ごとの積（`multiply_elementwise`）でもよい。
 
@@ -126,11 +141,13 @@ C5 の初回 CI では静的解析用 Kokkos スタブに `IndexType` が無く�
 ## D. ゲート実行の性能
 
 ### D1. カーネル 1 回あたりの固定費が小さい状態で支配的
+- 実装 PR: [#466](https://github.com/qulacs/scaluq/pull/466)（upstream 向け、未マージ）。
 - 現象: n=16（1 MiB）ではゲートの種類によらず 1 回約 0.1 ms かかる（RX 0.106、CX 0.095、PauliRotation 0.12、Pauli 適用 0.125 ms）。状態の更新そのものは 0.02 ms 程度で、残りは並列領域の起動などの固定費と見られる。SKIPPER の最適化経路では、n≤16 の実行時間の大半がこの固定費になる。
 - 追加の測定（2026-11-06）: n=12 ではゲート 1 個が 1 スレッドで約 4 µs、2 スレッド 16 µs、4 スレッド 25 µs、8 スレッド 47 µs と、スレッドを増やすほど遅くなる。n=20 では 1 スレッド 0.84 ms、8 スレッド 0.20 ms。LiH（12 量子ビット）の QPE は 1 スレッドで 8 スレッドの 7.5 倍速かった。
 - 提案: 小さい状態では並列化しない（またはスレッド数を絞る）しきい値を設ける。実行時にスレッド数を変更する API を用意する。
 
 ### D2. 1 量子ビットの `PauliRotation` が `RX`/`RZ` より遅い
+- 実装 PR: [#467](https://github.com/qulacs/scaluq/pull/467)（upstream 向け、未マージ）。
 - 現象: n=20 で `PauliRotation(X q)` 0.525 ms に対し `RX` 0.374 ms、`PauliRotation(Z q)` 0.462 ms に対し `RZ` 0.304 ms。1 量子ビットの `DenseMatrix` は 0.366 ms。
 - 提案: `PauliRotation` の生成時、または `Circuit.optimize` で、1 量子ビットの場合を専用カーネルに振り分ける。
 - 回避策（SKIPPER 2026-11-06）: 最適化経路では、1 量子ビットゲートを量子ビットごとに 2×2 行列へまとめて 1 個の `DenseMatrix` にする独自の融合を使う（`CircuitUnitary.fused_circuit`）。n=20 の Trotter ステップでは 59 ゲートが 37 ゲートに減り、QPE（m=6）が約 2 倍速くなった。
