@@ -8,6 +8,20 @@ SKIPPER は scaluq の `StateVector` だけを使って、補助量子ビット�
 
 ---
 
+## CI 障害への対応（2026-11-08）
+
+ユーザー依頼により、`@forest1040` の未マージ PR 全件を確認し、#456・#457・#458・#464・#467 の失敗／キャンセルを対応対象にした。PR は既存の upstream 向け PR を更新し、マージしない。
+
+| PR | 原因 | 対応・検証状況 |
+|---|---|---|
+| [#456](https://github.com/qulacs/scaluq/pull/456) | macOS arm64 wheel ジョブが実行前にキャンセル（実行ステップなし、理由は公開されていない） | 該当ジョブを再実行中。コード修正なし |
+| [#457](https://github.com/qulacs/scaluq/pull/457) | mypy 取得時に `files.pythonhosted.org` の DNS 解決が失敗。別の macOS ジョブは実行前キャンセル | 失敗・キャンセルされた macOS Python ジョブを再実行中。コード修正なし |
+| [#458](https://github.com/qulacs/scaluq/pull/458) | macOS ジョブが実行前キャンセル。再実行した Clang インストールジョブは nlohmann/json のダウンロードで HTTP 503 | C++ テストとインストールの該当ジョブを再実行。HTTP 503 のジョブを追加で再試行中。コード修正なし |
+| [#464](https://github.com/qulacs/scaluq/pull/464) | 静的解析スタブに `Kokkos::log` がなく `device_random.hpp` の解析でエラー（書式チェック自体は成功） | スタブを補う `f02d4bdc` を push。対象ヘッダの構文確認成功、CI 再実行中 |
+| [#467](https://github.com/qulacs/scaluq/pull/467) | CUDA `__half` と整数ゼロの比較が曖昧でコンパイル失敗。後続の HIP・SYCL・macOS ジョブはキャンセル | 通常・バッチの dispatch 2 か所を明示変換する `96bd335f` を push。F16 の関連ソース 2 件を GCC16 でコンパイル成功。CUDA 等は CI 再実行中 |
+
+修正は各 PR の fork ブランチへ push 済み。本書は差分に含めていない。統合検証ブランチにも取り込み、コード先端は `f34b4084`。ローカル再ビルド後、C++ 1052 件・CPU 構成 CTest・PauliRotation の Python 回帰 36 件が成功した。CI の最終結果を確認してこの表を更新する。変更が不要だったネットワーク障害・キャンセルについては、不要な実装修正を加えずジョブを再実行する。
+
 ## 作業領域の整理（2026-11-08）
 
 ### 追加整理（同日 11:35 JST）
@@ -53,13 +67,13 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 |---|---|---|---|
 | B1 NumPy 相互変換・B2 部分状態アクセス | [#460](https://github.com/qulacs/scaluq/pull/460) | `feat/state-data-access` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
 | C1 fused Pauli 加算・メモリ制限付き Operator 適用 | [#461](https://github.com/qulacs/scaluq/pull/461) | `feat/pauli-apply-add` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
-| C5 XOR グループ型 Pauli 演算子 | [#462](https://github.com/qulacs/scaluq/pull/462) | `feat/grouped-pauli-operator` | レビュー待ち・未マージ（ローカル検証完了、CUDA 互換修正 push 済み・CI 再実行中） |
+| C5 XOR グループ型 Pauli 演算子 | [#462](https://github.com/qulacs/scaluq/pull/462) | `feat/grouped-pauli-operator` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
 | C2 対角演算の要素積 API | [#465](https://github.com/qulacs/scaluq/pull/465) | `feat/state-elementwise-product` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
-| D1 小さいホスト状態の Serial 実行しきい値 | [#466](https://github.com/qulacs/scaluq/pull/466) | `perf/small-state-dispatch` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
-| D2 1 量子ビット PauliRotation の専用カーネル振り分け | [#467](https://github.com/qulacs/scaluq/pull/467) | `perf/single-qubit-pauli-rotation` | レビュー待ち・未マージ（ローカル検証完了、CUDA Install Library 失敗・原因確認と修正待ち） |
-| C3 バッチ状態への Pauli 適用 | [#468](https://github.com/qulacs/scaluq/pull/468) | `feat/batched-pauli-application` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| D1 小さいホスト状態の Serial 実行しきい値 | [#466](https://github.com/qulacs/scaluq/pull/466) | `perf/small-state-dispatch` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
+| D2 1 量子ビット PauliRotation の専用カーネル振り分け | [#467](https://github.com/qulacs/scaluq/pull/467) | `perf/single-qubit-pauli-rotation` | レビュー待ち・未マージ（半精度比較の CI 修正 `96bd335f` push 済み。ローカル検証成功、CI 再実行中） |
+| C3 バッチ状態への Pauli 適用 | [#468](https://github.com/qulacs/scaluq/pull/468) | `feat/batched-pauli-application` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
 | A4 Pauli 全行列での係数欠落修正 | [#470](https://github.com/qulacs/scaluq/pull/470) | `fix/pauli-full-matrix-coefficient` | レビュー待ち・未マージ（ローカル C++ 1052 件・CPU 構成 CTest・Python 回帰 6 件成功。CI 全成功） |
-| C4 重み付きバッチ演算・内積 | [#469](https://github.com/qulacs/scaluq/pull/469) | `feat/batched-weighted-algebra` | レビュー待ち・未マージ（ローカル検証完了、CI 実行中） |
+| C4 重み付きバッチ演算・内積 | [#469](https://github.com/qulacs/scaluq/pull/469) | `feat/batched-weighted-algebra` | レビュー待ち・未マージ（ローカル検証・CI 成功） |
 | F2 Metal 調査報告（文書のみ） | [#463](https://github.com/qulacs/scaluq/pull/463) | `research/f2-metal` | レビュー待ち・未マージ。別 AI が担当 |
 | F2 Metal 対応のコード（AdaptiveCpp で SYCL バックエンドをビルド） | [#464](https://github.com/qulacs/scaluq/pull/464)（draft） | `exp/f2-metal-scaluq` | draft。パッチを当てた Kokkos が必要。Metal f32 229/229、OpenMP 968/968。別 AI が担当 |
 
@@ -71,7 +85,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 |---|---|---|---|
 | `test/high-priority-improvements` | `upstream/main` (`01934038`) + B1・B2・C1・C5（PR #460・#461・#462） | `b16fd8f8`。C++・Python・文書例・SKIPPER の統合検証済み。最終の CI 互換修正も別途検証済み | 現行統合ブランチに包含。2026-11-08 にローカルブランチ削除 |
 | `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 + C5 CUDA 互換修正 | C2・D1・D2（PR #465・#466・#467）取り込み済み。コード先端 `c03728cd`。中優先度の全体検証完了、後続の C5 CUDA 互換修正も個別検証済み | 現行統合ブランチに包含。2026-11-08 にローカル・fork のブランチ削除 |
-| `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4・A4 + F2（PR #464 の 5 コミット） | C3・C4（PR #468・#469）統合検証済み。A4（PR #470）取り込み済み。F2 を 2026-11-07 に取り込み、OpenMP 1052/1052・`ScaluqCPUConfig`・Metal f32 250/250 を確認。2026-11-08 に CPU で再ビルドし、C++ 1052 件・CPU 構成 CTest・A4 Python 回帰 6 件成功 | fork へ push（upstream の PR・マージ対象外） |
+| `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4・A4 + F2（PR #464 の 5 コミット） | C3・C4（PR #468・#469）統合検証済み。CI 修正 #464・#467 も取り込み（コード先端 `f34b4084`）。A4（PR #470）取り込み済み。F2 を 2026-11-07 に取り込み、OpenMP 1052/1052・`ScaluqCPUConfig`・Metal f32 250/250 を確認。2026-11-08 に CPU で再ビルドし、C++ 1052 件・CPU 構成 CTest・A4 Python 回帰 6 件成功 | fork へ push（upstream の PR・マージ対象外） |
 
 現在の主作業ディレクトリ `~/work3/scaluq` は `test/batched-operator-improvements` を checkout している。各 PR 用ブランチは fork 上で維持し、ローカルブランチ・worktree は必要になったときに再作成する（2026-11-08 の整理は上記参照）。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
 
