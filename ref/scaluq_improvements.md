@@ -10,6 +10,14 @@ SKIPPER は scaluq の `StateVector` だけを使って、補助量子ビット�
 
 ## 作業領域の整理（2026-11-08）
 
+### 追加整理（同日 11:35 JST）
+
+- PR #460〜#462・#465〜#470 のローカルブランチ 9 個を削除。削除前に `origin/<branch>` とコミットが一致することを確認した。PR は未マージのため、fork 上の PR 用ブランチは維持する。必要なら `git worktree add -b <branch> <path> origin/<branch>` で復元できる。
+- 旧 D2 草稿の `scaluq-rotation` worktree と `perf/single-pauli-rotation` ブランチも削除。独自コミットと上記 PR 用ローカルブランチは `ref/reboot-artifacts/cleanup-2026-11-08/removed-local-branches.bundle` へ保存し、`git bundle verify` 成功を確認。未コミット差分は同ディレクトリの `rotation-uncommitted.patch` に保存した。バックアップは ignore 対象・ローカルのみで、PR やコミットには含めない。
+- 現在の worktree は 5 個: 主作業ディレクトリ、ビルド依存ソースを提供する `scaluq-pauli`、別 AI の F2 作業用 `scaluq-metal`・`scaluq-metal-exp`・`scaluq-metal-py`。後者 2 個には未コミット変更があり、削除・変更していない。ローカルブランチも 5 個（`main`、現行統合検証、依存ソース用、F2 用 2 個）。
+
+### 初回の整理記録
+
 - 不要な worktree 9 個を削除: `scaluq-state`、`scaluq-c1`、`scaluq-grouped`、`scaluq-elementwise`、`scaluq-small-state`、`scaluq-pauli-rotation`、`scaluq-batched-pauli`、`scaluq-batched-algebra`、`scaluq-pauli-full-matrix`。削除前に追跡ファイルの変更・未追跡ファイルがないことと、維持するビルドの依存参照がないことを確認した。各 PR 用ブランチと fork 上のブランチは維持しているため、必要なら `git worktree add <path> <branch>` で再作成できる。
 - 旧統合ブランチ `test/high-priority-improvements` と `test/medium-priority-improvements` は、全履歴が現行 `test/batched-operator-improvements` に含まれることを確認して削除。後者は fork 上からも削除した。現行の統合ブランチとその履歴・提案書は維持している。
 - C4 完成版で置き換えられた旧 WIP ブランチ `feat/batched-linear-combination`（`05923b64`）も削除。復元用パッチは `ref/reboot-artifacts/superseded-batched-linear-combination.patch` に保存（ignore 対象・ローカルのみ）。
@@ -35,7 +43,7 @@ SKIPPER は scaluq の `StateVector` だけを使って、補助量子ビット�
 
 ### 保留 worktree の注意
 
-`/Users/tmori/work3/scaluq-rotation` の `src/gate/gate_pauli.cpp` には、以前保留した D2 草稿の未コミット差分が残っている。最終 D2 は別 worktree の `perf/single-qubit-pauli-rotation`（PR #467）で完了しているため、この草稿を無条件で取り込まない。念のため差分を `ref/reboot-artifacts/paused-rotation-worktree.patch` に保存した。別 AI の `/Users/tmori/work3/scaluq-metal-exp` にある未追跡 `cfg.log`・`cfg-cpu.log` には触れていない。
+`/Users/tmori/work3/scaluq-rotation` にあった D2 草稿は、2026-11-08 の追加整理で差分・独自コミットをバックアップした後に worktree とローカルブランチを削除した（上記参照）。削除前の `src/gate/gate_pauli.cpp` には未コミット差分があった。最終 D2 は別 worktree の `perf/single-qubit-pauli-rotation`（PR #467）で完了しているため、この草稿を無条件で取り込まない。念のため差分を `ref/reboot-artifacts/paused-rotation-worktree.patch` に保存した。別 AI の `/Users/tmori/work3/scaluq-metal-exp` にある未追跡 `cfg.log`・`cfg-cpu.log` には触れていない。
 
 ## 実装・PR の追跡
 
@@ -65,7 +73,7 @@ PR の作成・状態変更のたびに、この表と該当項目のリンク�
 | `test/medium-priority-improvements` | `test/high-priority-improvements` (`b16fd8f8`) + C2・D1・D2 + C5 CUDA 互換修正 | C2・D1・D2（PR #465・#466・#467）取り込み済み。コード先端 `c03728cd`。中優先度の全体検証完了、後続の C5 CUDA 互換修正も個別検証済み | 現行統合ブランチに包含。2026-11-08 にローカル・fork のブランチ削除 |
 | `test/batched-operator-improvements` | `test/medium-priority-improvements` (`02c26082`) + C3・C4・A4 + F2（PR #464 の 5 コミット） | C3・C4（PR #468・#469）統合検証済み。A4（PR #470）取り込み済み。F2 を 2026-11-07 に取り込み、OpenMP 1052/1052・`ScaluqCPUConfig`・Metal f32 250/250 を確認。2026-11-08 に CPU で再ビルドし、C++ 1052 件・CPU 構成 CTest・A4 Python 回帰 6 件成功 | fork へ push（upstream の PR・マージ対象外） |
 
-現在の主作業ディレクトリ `~/work3/scaluq` は `test/batched-operator-improvements` を checkout している。各 PR 用ブランチは維持し、必要なものだけ別 worktree を置く（2026-11-08 の整理は上記参照）。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
+現在の主作業ディレクトリ `~/work3/scaluq` は `test/batched-operator-improvements` を checkout している。各 PR 用ブランチは fork 上で維持し、ローカルブランチ・worktree は必要になったときに再作成する（2026-11-08 の整理は上記参照）。 表中のコミット番号はコードを取り込んだ先端を指し、その後の本書だけの更新コミットは除く。
 
 - 統合検証ブランチはテスト・ベンチマーク用とし、このブランチから upstream へ PR を出したり、そのままマージしたりしない。
 - **本書は統合検証用ブランチにだけコミットする。PR 用ブランチには追加せず、本書の更新コミットも cherry-pick しない。** `/ref/` の ignore 設定は維持し、本書を最初に追跡するときだけ `git add -f ref/scaluq_improvements.md` で対象ファイルを明示する。他の参考資料は追加しない。
