@@ -280,17 +280,18 @@ scaluq（C++、Kokkos::View / parallel_for / parallel_reduce）
 
 ### F2 調査結果（2026-11-07、別 AI）
 
-詳細は `ref/f2_metal_investigation.md`（第 1〜7 版）。生データ・パッチ・再現プログラムは `ref/f2_metal/`。
+詳細は `ref/f2_metal_investigation.md`（第 1〜8 版）。生データ・パッチ・再現プログラムは `ref/f2_metal/`。
 
 - **実現可能性**: 可能。f32 の既存テストがすべて Apple M3 Ultra の GPU で成功した。単独のブランチでは 229/229。本ブランチに統合した状態では 250/250 で、C3・C4・C5 などの新機能を含む。
 - **前提環境**: macOS 26.7.1、AdaptiveCpp develop（`6c923f68`）に Metal 用の小さなパッチ、Kokkos 5.2.0 にパッチ（`ref/f2_metal/patches/`、24 ファイル）。実行時は `KOKKOS_DEVICE_ID=1` が必要。f64 は使えない（Metal 版は f32 以下に限る）。
-- **scaluq 側の変更**（PR #464、draft、5 コミット）:
+- **scaluq 側の変更**（PR #464、draft、6 コミット）:
   - CMake オプション `SCALUQ_SYCL_ACPP` を追加した。
   - デバイスコードから double を取り除いた。
   - スクラッチレベルをコンパイル時定数にした（Metal で変換できない IR を避けるため）。
   - f32 乱数の NaN を直した。
   - Metal ビルドではカウンタ方式（Philox）の乱数を使う。ほかのビルドは従来の乱数のまま。
   - `internal::Sum` の結果 View を HostSpace にした（本ブランチの統合検証で見つかった）。
+  - `pyproject.toml` で `SCALUQ_SYCL_ACPP` を受け渡す（Python wheel 用）。
 - **性能**（GPU が空いた状態、f32）:
   - n ≥ 24 のゲートはネイティブ Metal と同じ約 700 GB/s で、CPU（OpenMP 28 スレッド）の 2.6〜3 倍。
   - 小さい状態の 1 ゲートは約 19 µs。Kokkos パッチで間接カーネル用バッファを 4 個から 256 個に増やし、約 57 µs から縮めた。
@@ -299,7 +300,9 @@ scaluq（C++、Kokkos::View / parallel_for / parallel_reduce）
   - 上流の Kokkos・AdaptiveCpp にはまだ入っていない。報告済み: Kokkos #9750、AdaptiveCpp #2310〜#2313。
   - GPU 上で Kokkos 標準の乱数プールを大きな並列度で使うと、カーネルが暴走して OS を再起動するまで GPU に残る。scaluq の乱数は PR #464 で対策済み。
 - **上流 scaluq への報告**: #471（`Operator::get_expectation_value` が項ごとの計算の 5〜18 倍遅い）、#472（f32 の `get_squared_norm`/`normalize` の精度劣化）。どちらも CPU でも起きる。
-- **本ブランチで確認した範囲**: OpenMP の C++ 1052/1052、`ScaluqCPUConfig`、Metal の f32 C++ 250/250。Python・文書例・SKIPPER の統合検証は、F2 の統合後には再実行していない。CPU の結果を Metal の検証結果として扱わない、という方針は変わらない。
+- **本ブランチで確認した範囲**: OpenMP の C++ 1052/1052、`ScaluqCPUConfig`、Metal の f32 C++ 250/250。CPU の結果を Metal の検証結果として扱わない、という方針は変わらない。
+- **Python（2026-11-08）**: `db94d63b` から Metal 版の wheel（f32 だけ）を作り、GPU で動くことを確認した。f32 に置き換えた `python_test` は 93/93、doctest は 407/412（失敗は f64 の桁数で書かれた期待値だけ）。SKIPPER の f32 の精度テストも、この wheel で 12/12 成功した（SKIPPER 側のセッションが確認）。ビルドには `SCALUQ_USE_OMP=OFF` が要る。詳細は `ref/f2_metal_investigation.md` の冒頭と第 8 版。
+- **残件: wheel の配布**: wheel は AdaptiveCpp のライブラリ（`libacpp-rt` などと、実行時に読み込む Metal バックエンド・JIT・bitcode、さらに Homebrew の LLVM 21）を絶対パスで参照するので、ビルドしたマシンでしか動かない。ほかのマシンで使うときは、これらの同梱か利用者側での導入が必要。未対応。詳細は `ref/f2_metal_investigation.md` 第 8 版の「残件: wheel の配布」。
 
 ### F3. 検証の手順
 1. **AdaptiveCpp 単体**: Metal 対応で AdaptiveCpp をビルドし、`acpp-info` で GPU が見えること、簡単な SYCL カーネル（axpy、リダクション）が動くことを確認する。
