@@ -22,6 +22,13 @@ SKIPPER は scaluq の `StateVector` だけを使って、補助量子ビット�
 
 修正は各 PR の fork ブランチへ push 済み。本書は差分に含めていない。統合検証ブランチにも取り込み、コード先端は `31a52403`。ローカル再ビルド後、C++ 1052 件・CPU 構成 CTest・PauliRotation の Python 回帰 36 件が成功した。CI の最終結果を確認してこの表を更新する。初回はネットワーク障害・キャンセルの該当ジョブだけを再実行したが、複数 PR・複数ランナーで nlohmann/json の GitHub release 配布が HTTP 503 または HTTP/2 stream refused で継続失敗した。このため共通 CMake 修正 `56ccb0b8` を各 PR に適用した。元の release URL に加え、公式 `codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.11.3` を代替取得先とし、バージョンは変えていない。CMake の実動作で主 URL 失敗→代替取得・展開・構成成功を検証し、`single_include/nlohmann/json.hpp` の SHA-256 が既存 release と一致することも確認した。統合側の CMake 再構成も成功。
 
+追補（2026-11-08 19:47 JST）: #456・#457・#458・#464・#467 の最新コミットでは失敗チェック 0 件、CI は実行中または runner 待ち（各 22〜23 件未完了）。#464 の CI は Configure 成功後に clang-tidy 実行まで進んだ。ローカルでもキャッシュ済み依存を使い、全 `src/*.cpp` への clang-tidy がエラーなしで終了した。CI 全体の完了を確認済みとは扱わない。
+
+追加課題（優先度 **未設定**）: `CMakeLists.txt` の `clang-tidy` ターゲットにある `sed -i` は BSD sed の macOS では失敗する。Linux CI とは別の既存の移植性課題であり、今回の PR に修正を混ぜない。ローカル検証時は同じ modmap 除去を Perl で行ってから clang-tidy を直接実行し、成功した。
+
+今回の一時 worktree 4 個と `fix/ci-*` ローカルブランチ 6 個は、各 PR のリモートブランチへの push と作業ツリーのクリーンを確認した後に削除した。修正コミットは PR ブランチ・統合ブランチに残り、復元用 bundle も `ref/reboot-artifacts/ci-fixes-2026-11-08.bundle` へ保存・検証した（ignore 対象、未コミット）。
+
+
 ## 作業領域の整理（2026-11-08）
 
 ### 追加整理（同日 11:35 JST）
